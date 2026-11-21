@@ -1,6 +1,6 @@
 {
   "name": "SIWARTA",
-  "description": "Sistem Informasi Iuran Warga & Tagihan Air Perumahan Tamaland (SIWARTA)",
+  "description": "Sistem Iuran Warga Tamaland",
   "requestFramePermissions": [],
   "majorCapabilities": [
     "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
