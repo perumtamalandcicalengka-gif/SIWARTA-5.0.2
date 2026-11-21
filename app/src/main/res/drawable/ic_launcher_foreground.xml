@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Bold residential house silhouette centered inside 66dp safe zone -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,28 L80,49 L74,49 L74,77 L34,77 L34,49 L28,49 Z" />
+    <!-- Inner community shield / doorway accent -->
+    <path
+        android:fillColor="#0284C7"
+        android:pathData="M47,56 L61,56 L61,77 L47,77 Z" />
+    <!-- Emerald badge dot above doorway -->
+    <path
+        android:fillColor="#10B981"
+        android:pathData="M54,40 A5,5 0 1,0 54,50 A5,5 0 1,0 54,40 Z" />
+</vector>
