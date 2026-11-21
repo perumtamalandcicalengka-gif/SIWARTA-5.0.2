@@ -33,70 +33,37 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Code
-import androidx.compose.material.icons.rounded.DeleteSweep
-import androidx.compose.material.icons.rounded.FolderOpen
-import androidx.compose.material.icons.rounded.Fullscreen
-import androidx.compose.material.icons.rounded.FullscreenExit
-import androidx.compose.material.icons.rounded.MoreVert
-import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Refresh
-import androidx.compose.material.icons.rounded.RestartAlt
-import androidx.compose.material.icons.rounded.Terminal
-import androidx.compose.material.icons.rounded.Visibility
 import androidx.compose.material.icons.rounded.WifiOff
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalIconButton
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -112,13 +79,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
@@ -128,17 +91,12 @@ import com.example.notification.ReminderScheduleConfig
 import com.example.notification.SiwartaNotificationHelper
 import com.example.ui.theme.BrandBlue400
 import com.example.ui.theme.BrandBlue600
-import com.example.ui.theme.Emerald500
-import com.example.ui.theme.Navy800
 import com.example.ui.theme.Navy900
-import com.example.ui.theme.Navy950
-import com.example.ui.theme.Rose500
 import com.example.ui.theme.Slate800
 import com.example.ui.theme.Slate900
 import java.io.ByteArrayInputStream
 import java.io.File
 import java.util.concurrent.atomic.AtomicReference
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 private const val SIWARTA_LOCAL_HOST = "siwarta.tamaland.local"
@@ -160,7 +118,6 @@ private data class JsDialogState(
   val jsPromptResult: JsPromptResult? = null,
 )
 
-@OptIn(ExperimentalMaterial3Api::class)
 @SuppressLint("SetJavaScriptEnabled", "ClickableViewAccessibility")
 @Composable
 fun SiwartaWebViewScreen(
@@ -176,7 +133,6 @@ fun SiwartaWebViewScreen(
   latestSourceRef.set(uiState.source)
 
   var lastBackPressTime by remember { mutableLongStateOf(0L) }
-  var showOverflowMenu by remember { mutableStateOf(false) }
 
   var pendingFileCallback by remember { mutableStateOf<ValueCallback<Array<Uri>>?>(null) }
   var pendingCameraUri by remember { mutableStateOf<Uri?>(null) }
@@ -186,33 +142,6 @@ fun SiwartaWebViewScreen(
   var jsPromptInput by remember(activeJsDialog) {
     mutableStateOf(activeJsDialog?.defaultValue.orEmpty())
   }
-
-  val openHtmlFileLauncher =
-    rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-      if (uri == null) return@rememberLauncherForActivityResult
-      runCatching {
-          val fileName = resolveFileDisplayName(context, uri) ?: "Dokumen.html"
-          val htmlText =
-            context.contentResolver.openInputStream(uri)?.bufferedReader(Charsets.UTF_8)?.use {
-              it.readText()
-            } ?: ""
-          if (htmlText.isBlank()) {
-            coroutineScope.launch {
-              snackbarHostState.showSnackbar("File HTML kosong atau tidak dapat dibaca.")
-            }
-          } else {
-            viewModel.loadPickedHtmlFile(fileName, htmlText)
-            coroutineScope.launch {
-              snackbarHostState.showSnackbar("Berhasil memuat: $fileName")
-            }
-          }
-        }
-        .onFailure { err ->
-          coroutineScope.launch {
-            snackbarHostState.showSnackbar("Gagal membaca file HTML: ${err.message}")
-          }
-        }
-    }
 
   val openDocumentLauncher =
     rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
@@ -630,14 +559,6 @@ fun SiwartaWebViewScreen(
     }
   }
 
-  // Real-time auto-render when editing HTML in live editor
-  LaunchedEffect(uiState.editorText, uiState.autoLiveRender, uiState.activeTab) {
-    if (uiState.activeTab == RendererTab.EDITOR && uiState.autoLiveRender) {
-      delay(450L)
-      viewModel.applyEditorHtml()
-    }
-  }
-
   DisposableEffect(webView) {
     onDispose {
       activeJsDialog?.jsResult?.cancel()
@@ -650,19 +571,6 @@ fun SiwartaWebViewScreen(
   }
 
   BackHandler {
-    if (uiState.showConsoleSheet) {
-      viewModel.toggleConsoleSheet(false)
-      return@BackHandler
-    }
-    if (uiState.activeTab == RendererTab.EDITOR) {
-      viewModel.selectTab(RendererTab.PREVIEW)
-      return@BackHandler
-    }
-    if (uiState.isFullscreen) {
-      viewModel.toggleFullscreen(false)
-      return@BackHandler
-    }
-
     webView.evaluateJavascript(
       "(function(){ return typeof window.__siwartaHandleAndroidBack === 'function' ? window.__siwartaHandleAndroidBack() : false; })();"
     ) { result ->
@@ -690,36 +598,6 @@ fun SiwartaWebViewScreen(
   Scaffold(
     containerColor = Navy900,
     contentWindowInsets = WindowInsets.safeDrawing,
-    topBar = {
-      if (!uiState.isFullscreen) {
-        RendererTopBar(
-          title = uiState.pageTitle,
-          isCustomSource = uiState.source is HtmlSource.CustomHtml,
-          activeTab = uiState.activeTab,
-          consoleCount = uiState.consoleLogs.size,
-          showOverflowMenu = showOverflowMenu,
-          onSelectTab = { tab -> viewModel.selectTab(tab) },
-          onOpenHtmlFile = {
-            openHtmlFileLauncher.launch(arrayOf("text/html", "application/xhtml+xml", "text/plain"))
-          },
-          onReload = { webView.reload() },
-          onToggleOverflow = { showOverflowMenu = it },
-          onResetSiwarta = {
-            showOverflowMenu = false
-            viewModel.resetToBundledSiwarta()
-          },
-          onOpenConsole = {
-            showOverflowMenu = false
-            viewModel.toggleConsoleSheet(true)
-          },
-          onEnterFullscreen = {
-            showOverflowMenu = false
-            viewModel.selectTab(RendererTab.PREVIEW)
-            viewModel.toggleFullscreen(true)
-          },
-        )
-      }
-    },
     snackbarHost = {
       SnackbarHost(
         hostState = snackbarHostState,
@@ -727,72 +605,20 @@ fun SiwartaWebViewScreen(
       )
     },
   ) { innerPadding ->
-    BoxWithConstraints(
+    Box(
       modifier =
         Modifier.fillMaxSize()
           .background(Navy900)
           .padding(innerPadding)
     ) {
-      val isWideScreen = maxWidth >= 840.dp
-
-      if (isWideScreen && uiState.activeTab == RendererTab.EDITOR && !uiState.isFullscreen) {
-        Row(modifier = Modifier.fillMaxSize()) {
-          LiveHtmlEditorPane(
-            editorText = uiState.editorText,
-            autoLiveRender = uiState.autoLiveRender,
-            showSwitchToPreview = false,
-            onTextChange = viewModel::updateEditorText,
-            onToggleAutoLive = viewModel::setAutoLiveRender,
-            onApplyClick = { viewModel.applyEditorHtml() },
-            onApplyAndPreview = {
-              viewModel.applyEditorHtml()
-              viewModel.selectTab(RendererTab.PREVIEW)
-            },
-            modifier = Modifier.weight(1f).fillMaxHeight(),
-          )
-          Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
-            InteractiveWebViewPane(
-              webView = webView,
-              isPageLoading = uiState.isPageLoading,
-              loadProgress = uiState.loadProgress,
-              hasMainFrameError = uiState.hasMainFrameError,
-              errorDescription = uiState.errorDescription,
-              isFullscreen = false,
-              onReload = { webView.reload() },
-              onExitFullscreen = { viewModel.toggleFullscreen(false) },
-            )
-          }
-        }
-      } else {
-        Box(modifier = Modifier.fillMaxSize()) {
-          InteractiveWebViewPane(
-            webView = webView,
-            isPageLoading = uiState.isPageLoading,
-            loadProgress = uiState.loadProgress,
-            hasMainFrameError = uiState.hasMainFrameError,
-            errorDescription = uiState.errorDescription,
-            isFullscreen = uiState.isFullscreen,
-            onReload = { webView.reload() },
-            onExitFullscreen = { viewModel.toggleFullscreen(false) },
-          )
-
-          if (uiState.activeTab == RendererTab.EDITOR && !uiState.isFullscreen) {
-            LiveHtmlEditorPane(
-              editorText = uiState.editorText,
-              autoLiveRender = uiState.autoLiveRender,
-              showSwitchToPreview = true,
-              onTextChange = viewModel::updateEditorText,
-              onToggleAutoLive = viewModel::setAutoLiveRender,
-              onApplyClick = { viewModel.applyEditorHtml() },
-              onApplyAndPreview = {
-                viewModel.applyEditorHtml()
-                viewModel.selectTab(RendererTab.PREVIEW)
-              },
-              modifier = Modifier.fillMaxSize(),
-            )
-          }
-        }
-      }
+      InteractiveWebViewPane(
+        webView = webView,
+        isPageLoading = uiState.isPageLoading,
+        loadProgress = uiState.loadProgress,
+        hasMainFrameError = uiState.hasMainFrameError,
+        errorDescription = uiState.errorDescription,
+        onReload = { webView.reload() },
+      )
     }
   }
 
@@ -861,247 +687,6 @@ fun SiwartaWebViewScreen(
     )
   }
 
-  // Real-time JS Console Log Sheet
-  if (uiState.showConsoleSheet) {
-    ModalBottomSheet(
-      onDismissRequest = { viewModel.toggleConsoleSheet(false) },
-      containerColor = Slate900,
-      contentColor = Color.White,
-    ) {
-      Column(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-      ) {
-        Row(
-          modifier = Modifier.fillMaxWidth(),
-          horizontalArrangement = Arrangement.SpaceBetween,
-          verticalAlignment = Alignment.CenterVertically,
-        ) {
-          Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-          ) {
-            Icon(
-              imageVector = Icons.Rounded.Terminal,
-              contentDescription = null,
-              tint = BrandBlue400,
-            )
-            Text(
-              text = "Konsol JavaScript Real-Time",
-              style = MaterialTheme.typography.titleMedium,
-              fontWeight = FontWeight.Bold,
-            )
-          }
-          TextButton(
-            onClick = { viewModel.clearConsoleLogs() },
-            modifier = Modifier.minimumInteractiveComponentSize().testTag("clear_console_button"),
-          ) {
-            Icon(
-              imageVector = Icons.Rounded.DeleteSweep,
-              contentDescription = null,
-              modifier = Modifier.size(18.dp),
-            )
-            Spacer(modifier = Modifier.width(6.dp))
-            Text("Bersihkan")
-          }
-        }
-
-        if (uiState.consoleLogs.isEmpty()) {
-          Surface(
-            color = Slate800,
-            shape = RoundedCornerShape(16.dp),
-            modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp),
-          ) {
-            Text(
-              text = "Belum ada log konsol dari halaman HTML yang dirender.",
-              color = Color(0xFF94A3B8),
-              style = MaterialTheme.typography.bodySmall,
-              modifier = Modifier.padding(16.dp),
-            )
-          }
-        } else {
-          LazyColumn(
-            modifier = Modifier.fillMaxWidth().height(280.dp).padding(bottom = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-          ) {
-            items(uiState.consoleLogs, key = { it.id }) { log ->
-              val levelColor =
-                when (log.level) {
-                  "ERROR" -> Rose500
-                  "WARNING" -> Color(0xFFF59E0B)
-                  else -> Emerald500
-                }
-              Surface(
-                color = Slate800,
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier.fillMaxWidth(),
-              ) {
-                Column(modifier = Modifier.padding(12.dp)) {
-                  Text(
-                    text = "${log.level} • Baris ${log.lineNumber}",
-                    color = levelColor,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    fontFamily = FontFamily.Monospace,
-                  )
-                  Spacer(modifier = Modifier.height(4.dp))
-                  Text(
-                    text = log.message,
-                    color = Color(0xFFE2E8F0),
-                    fontSize = 12.sp,
-                    fontFamily = FontFamily.Monospace,
-                  )
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun RendererTopBar(
-  title: String,
-  isCustomSource: Boolean,
-  activeTab: RendererTab,
-  consoleCount: Int,
-  showOverflowMenu: Boolean,
-  onSelectTab: (RendererTab) -> Unit,
-  onOpenHtmlFile: () -> Unit,
-  onReload: () -> Unit,
-  onToggleOverflow: (Boolean) -> Unit,
-  onResetSiwarta: () -> Unit,
-  onOpenConsole: () -> Unit,
-  onEnterFullscreen: () -> Unit,
-) {
-  TopAppBar(
-    colors =
-      TopAppBarDefaults.topAppBarColors(
-        containerColor = Navy950,
-        titleContentColor = Color.White,
-        actionIconContentColor = Color.White,
-      ),
-    title = {
-      Column {
-        Text(
-          text = title,
-          maxLines = 1,
-          overflow = TextOverflow.Ellipsis,
-          style = MaterialTheme.typography.titleSmall,
-          fontWeight = FontWeight.Bold,
-        )
-        Text(
-          text = if (isCustomSource) "HTML Interaktif Kustom" else "SIWARTA • HTML Tersemat",
-          maxLines = 1,
-          style = MaterialTheme.typography.labelSmall,
-          color = BrandBlue400,
-        )
-      }
-    },
-    actions = {
-      SingleChoiceSegmentedButtonRow(
-        modifier = Modifier.padding(end = 4.dp),
-      ) {
-        SegmentedButton(
-          selected = activeTab == RendererTab.PREVIEW,
-          onClick = { onSelectTab(RendererTab.PREVIEW) },
-          shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
-          colors =
-            SegmentedButtonDefaults.colors(
-              activeContainerColor = BrandBlue600,
-              activeContentColor = Color.White,
-              inactiveContainerColor = Navy800,
-              inactiveContentColor = Color(0xFF94A3B8),
-            ),
-          icon = {
-            Icon(
-              imageVector = Icons.Rounded.Visibility,
-              contentDescription = "Mode Pratinjau",
-              modifier = Modifier.size(16.dp),
-            )
-          },
-          modifier = Modifier.testTag("tab_preview_button"),
-        ) {
-          Text("Render", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
-        }
-        SegmentedButton(
-          selected = activeTab == RendererTab.EDITOR,
-          onClick = { onSelectTab(RendererTab.EDITOR) },
-          shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
-          colors =
-            SegmentedButtonDefaults.colors(
-              activeContainerColor = BrandBlue600,
-              activeContentColor = Color.White,
-              inactiveContainerColor = Navy800,
-              inactiveContentColor = Color(0xFF94A3B8),
-            ),
-          icon = {
-            Icon(
-              imageVector = Icons.Rounded.Code,
-              contentDescription = "Mode Editor HTML",
-              modifier = Modifier.size(16.dp),
-            )
-          },
-          modifier = Modifier.testTag("tab_editor_button"),
-        ) {
-          Text("Editor", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
-        }
-      }
-
-      IconButton(
-        onClick = onOpenHtmlFile,
-        modifier = Modifier.minimumInteractiveComponentSize().testTag("open_html_file_button"),
-      ) {
-        Icon(
-          imageVector = Icons.Rounded.FolderOpen,
-          contentDescription = "Buka file HTML dari perangkat",
-        )
-      }
-
-      Box {
-        IconButton(
-          onClick = { onToggleOverflow(true) },
-          modifier = Modifier.minimumInteractiveComponentSize().testTag("more_options_button"),
-        ) {
-          Icon(
-            imageVector = Icons.Rounded.MoreVert,
-            contentDescription = "Menu lainnya",
-          )
-        }
-        DropdownMenu(
-          expanded = showOverflowMenu,
-          onDismissRequest = { onToggleOverflow(false) },
-        ) {
-          DropdownMenuItem(
-            text = { Text("Muat Ulang Halaman") },
-            leadingIcon = { Icon(Icons.Rounded.Refresh, contentDescription = null) },
-            onClick = {
-              onToggleOverflow(false)
-              onReload()
-            },
-          )
-          DropdownMenuItem(
-            text = { Text("Reset ke SIWARTA") },
-            leadingIcon = { Icon(Icons.Rounded.RestartAlt, contentDescription = null) },
-            onClick = onResetSiwarta,
-          )
-          DropdownMenuItem(
-            text = { Text("Konsol JS ($consoleCount)") },
-            leadingIcon = { Icon(Icons.Rounded.Terminal, contentDescription = null) },
-            onClick = onOpenConsole,
-          )
-          DropdownMenuItem(
-            text = { Text("Mode Layar Penuh") },
-            leadingIcon = { Icon(Icons.Rounded.Fullscreen, contentDescription = null) },
-            onClick = onEnterFullscreen,
-          )
-        }
-      }
-    },
-  )
 }
 
 @Composable
@@ -1111,9 +696,7 @@ private fun InteractiveWebViewPane(
   loadProgress: Int,
   hasMainFrameError: Boolean,
   errorDescription: String,
-  isFullscreen: Boolean,
   onReload: () -> Unit,
-  onExitFullscreen: () -> Unit,
 ) {
   Box(modifier = Modifier.fillMaxSize()) {
     AndroidView(
@@ -1133,27 +716,6 @@ private fun InteractiveWebViewPane(
         color = BrandBlue600,
         trackColor = Slate900,
       )
-    }
-
-    if (isFullscreen) {
-      FilledTonalIconButton(
-        onClick = onExitFullscreen,
-        colors =
-          IconButtonDefaults.filledTonalIconButtonColors(
-            containerColor = Navy950.copy(alpha = 0.85f),
-            contentColor = Color.White,
-          ),
-        modifier =
-          Modifier.align(Alignment.BottomEnd)
-            .padding(16.dp)
-            .minimumInteractiveComponentSize()
-            .testTag("exit_fullscreen_button"),
-      ) {
-        Icon(
-          imageVector = Icons.Rounded.FullscreenExit,
-          contentDescription = "Keluar dari layar penuh",
-        )
-      }
     }
 
     AnimatedVisibility(
@@ -1224,105 +786,6 @@ private fun InteractiveWebViewPane(
         }
       }
     }
-  }
-}
-
-@Composable
-private fun LiveHtmlEditorPane(
-  editorText: String,
-  autoLiveRender: Boolean,
-  showSwitchToPreview: Boolean,
-  onTextChange: (String) -> Unit,
-  onToggleAutoLive: (Boolean) -> Unit,
-  onApplyClick: () -> Unit,
-  onApplyAndPreview: () -> Unit,
-  modifier: Modifier = Modifier,
-) {
-  Column(
-    modifier = modifier.background(Slate900).padding(12.dp),
-    verticalArrangement = Arrangement.spacedBy(10.dp),
-  ) {
-    Surface(
-      color = Navy800,
-      shape = RoundedCornerShape(16.dp),
-      modifier = Modifier.fillMaxWidth(),
-    ) {
-      Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween,
-      ) {
-        Row(
-          verticalAlignment = Alignment.CenterVertically,
-          horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-          Switch(
-            checked = autoLiveRender,
-            onCheckedChange = onToggleAutoLive,
-            modifier = Modifier.testTag("auto_live_render_switch"),
-          )
-          Text(
-            text = "Render Real-Time",
-            color = Color.White,
-            style = MaterialTheme.typography.labelLarge,
-            fontWeight = FontWeight.SemiBold,
-          )
-        }
-
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-          if (!showSwitchToPreview) {
-            OutlinedButton(
-              onClick = onApplyClick,
-              modifier = Modifier.minimumInteractiveComponentSize().testTag("apply_html_button"),
-            ) {
-              Text("Terapkan")
-            }
-          } else {
-            Button(
-              onClick = onApplyAndPreview,
-              colors = ButtonDefaults.buttonColors(containerColor = Emerald500, contentColor = Navy950),
-              modifier =
-                Modifier.minimumInteractiveComponentSize().testTag("apply_and_preview_button"),
-            ) {
-              Icon(
-                imageVector = Icons.Rounded.PlayArrow,
-                contentDescription = null,
-                modifier = Modifier.size(18.dp),
-              )
-              Spacer(modifier = Modifier.width(4.dp))
-              Text("Render", fontWeight = FontWeight.Bold)
-            }
-          }
-        }
-      }
-    }
-
-    HorizontalDivider(color = Slate800)
-
-    OutlinedTextField(
-      value = editorText,
-      onValueChange = onTextChange,
-      label = { Text("Kode HTML / CSS / JavaScript") },
-      textStyle =
-        TextStyle(
-          fontFamily = FontFamily.Monospace,
-          fontSize = 13.sp,
-          lineHeight = 19.sp,
-          color = Color(0xFFE2E8F0),
-        ),
-      colors =
-        OutlinedTextFieldDefaults.colors(
-          focusedContainerColor = Navy950,
-          unfocusedContainerColor = Navy950,
-          focusedBorderColor = BrandBlue600,
-          unfocusedBorderColor = Slate800,
-          focusedLabelColor = BrandBlue400,
-          unfocusedLabelColor = Color(0xFF94A3B8),
-          cursorColor = BrandBlue400,
-        ),
-      shape = RoundedCornerShape(16.dp),
-      modifier = Modifier.fillMaxSize().weight(1f).testTag("html_editor_input"),
-    )
   }
 }
 
