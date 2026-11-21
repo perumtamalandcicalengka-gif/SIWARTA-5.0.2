@@ -11,6 +11,7 @@ import android.os.Build
 import android.os.Message
 import android.provider.OpenableColumns
 import android.view.MotionEvent
+import android.view.ViewGroup
 import android.webkit.ConsoleMessage
 import android.webkit.JavascriptInterface
 import android.webkit.JsPromptResult
@@ -254,6 +255,11 @@ fun SiwartaWebViewScreen(
 
   val webView = remember {
     WebView(context).apply {
+      layoutParams =
+        ViewGroup.LayoutParams(
+          ViewGroup.LayoutParams.MATCH_PARENT,
+          ViewGroup.LayoutParams.MATCH_PARENT,
+        )
       setBackgroundColor(android.graphics.Color.parseColor("#070D1E"))
       isFocusable = true
       isFocusableInTouchMode = true
@@ -330,13 +336,27 @@ fun SiwartaWebViewScreen(
                 val activeSource = latestSourceRef.get()
                 if (activeSource is HtmlSource.CustomHtml) {
                   val bytes = activeSource.content.toByteArray(Charsets.UTF_8)
-                  return WebResourceResponse("text/html", "UTF-8", ByteArrayInputStream(bytes))
+                  return WebResourceResponse(
+                    "text/html",
+                    "UTF-8",
+                    200,
+                    "OK",
+                    mapOf("Cache-Control" to "no-store"),
+                    ByteArrayInputStream(bytes),
+                  )
                 }
               }
               if (path == SIWARTA_ASSET_FILE || path.isEmpty()) {
                 return runCatching {
                     val stream = context.assets.open(SIWARTA_ASSET_FILE)
-                    WebResourceResponse("text/html", "UTF-8", stream)
+                    WebResourceResponse(
+                      "text/html",
+                      "UTF-8",
+                      200,
+                      "OK",
+                      mapOf("Cache-Control" to "no-store"),
+                      stream,
+                    )
                   }
                   .getOrNull()
               }
@@ -394,7 +414,7 @@ fun SiwartaWebViewScreen(
             error: WebResourceError?,
           ) {
             super.onReceivedError(view, request, error)
-            if (request?.isForMainFrame == true) {
+            if (request?.isForMainFrame == true && request.url?.host == SIWARTA_LOCAL_HOST) {
               viewModel.onMainFrameError(
                 error?.description?.toString() ?: "Tidak dapat memuat halaman HTML."
               )
@@ -701,6 +721,20 @@ private fun InteractiveWebViewPane(
   Box(modifier = Modifier.fillMaxSize()) {
     AndroidView(
       factory = { webView },
+      update = { view ->
+        val lp = view.layoutParams
+        if (
+          lp == null ||
+            lp.width != ViewGroup.LayoutParams.MATCH_PARENT ||
+            lp.height != ViewGroup.LayoutParams.MATCH_PARENT
+        ) {
+          view.layoutParams =
+            ViewGroup.LayoutParams(
+              ViewGroup.LayoutParams.MATCH_PARENT,
+              ViewGroup.LayoutParams.MATCH_PARENT,
+            )
+        }
+      },
       modifier = Modifier.fillMaxSize().testTag("siwarta_webview"),
     )
 
